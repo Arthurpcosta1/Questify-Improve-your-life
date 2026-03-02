@@ -112,14 +112,14 @@ export function DungeonContent() {
 
     if (viewState === 'active' && timeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        setTimeLeft((prev) => prev - 1); // <-- MUDEI AQUE
       }, 1000);
     } else if (timeLeft === 0 && viewState === 'active') {
       handleCompleteDungeon();
     }
 
     return () => clearInterval(interval);
-  }, [viewState, timeLeft, isPaused]);
+  }, [viewState, isPaused]); // <-- TIREI O timeLeft DAQUI
 
   // Anti-Cheat Logic
   useEffect(() => {

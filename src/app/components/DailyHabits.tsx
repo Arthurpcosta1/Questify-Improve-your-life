@@ -15,8 +15,8 @@ export interface Habit {
   title: string;
   completed: boolean;
   attribute: Attribute;
-  xp: number;
-  gold: number;
+  xp?: number;
+  gold?: number;
   repeatDays?: number[]; // Array of 0-6 (Sun-Sat)
 }
 

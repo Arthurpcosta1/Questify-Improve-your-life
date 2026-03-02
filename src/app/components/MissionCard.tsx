@@ -27,8 +27,9 @@ export interface MissionCardProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onComplete?: (id: string) => void;
+  xp?: number;
+  gold?: number;
 }
-
 const attributeColors: Record<Attribute, string> = {
   STR: 'bg-red-500/20 text-red-400',
   INT: 'bg-blue-500/20 text-blue-400',

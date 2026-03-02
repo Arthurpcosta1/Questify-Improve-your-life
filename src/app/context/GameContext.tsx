@@ -253,6 +253,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
   };
 
+  // --- Helper: Sync Supabase ---
+  const syncProfileData = async (payload: any) => { // <-- MUDANÇA AQUI: troquei para "any"
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', user.id);
+        
+      if (error) console.log('Erro no Sync:', error);
+    } catch (e) {
+      console.log('Erro no Sync:', e);
+    }
+  };
+
   const updatePlayerProfile = async (name: string, avatar: string) => {
     setPlayerStats(prev => ({ ...prev, name, avatar }));
     try {
@@ -425,24 +442,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const spendGold = (amount: number): boolean => {
     if (playerStats.gold < amount) return false;
     const newGold = playerStats.gold - amount;
-    setPlayerStats(prev => ({ ...prev, gold: newGold }));
     
-    // Sync to Supabase in background
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      const finalUserId = user?.id || '50bbc680-ac42-4409-b635-91350966be33';
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ gold: newGold })
-          .eq('id', finalUserId);
-        
-        if (error) {
-          console.log('DETALHE DO ERRO 400:', JSON.stringify(error, null, 2));
-        }
-      } catch (e) {
-        console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2));
-      }
-    }).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
+    setPlayerStats(prev => ({ ...prev, gold: newGold }));
+    syncProfileData({ gold: newGold }); 
     
     return true;
   };
@@ -450,26 +452,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const healPlayer = (amount: number) => {
       setPlayerStats(prev => {
           const newHp = Math.min(prev.maxHp, prev.hp + amount);
-          const newStats = { ...prev, hp: newHp };
-          
-          // Sync to Supabase in background
-          supabase.auth.getUser().then(async ({ data: { user } }) => {
-            const finalUserId = user?.id || '50bbc680-ac42-4409-b635-91350966be33';
-            try {
-              const { error } = await supabase
-                .from('profiles')
-                .update({ hp: newHp })
-                .eq('id', finalUserId);
-              
-              if (error) {
-                console.log('DETALHE DO ERRO 400:', JSON.stringify(error, null, 2));
-              }
-            } catch (e) {
-              console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2));
-            }
-          }).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-          
-          return newStats;
+          syncProfileData({ hp: newHp }); 
+          return { ...prev, hp: newHp };
       });
   };
 
@@ -478,51 +462,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
           const newHp = prev.hp - amount;
           if (newHp <= 0) {
               const newStats = { ...prev, hp: 100, level: 1, title: getRank(1), xp: 0, currentStreak: 0 };
-              // Sincronização obrigatória e imediata no Supabase
-              (async () => {
-                const { data: { user } } = await supabase.auth.getUser();
-                const finalUserId = user?.id || '50bbc680-ac42-4409-b635-91350966be33';
-                try {
-                  const { error } = await supabase
-                    .from('profiles')
-                    .update({
-                      hp: 100,
-                      level: 1,
-                      xp: 0
-                    })
-                    .eq('id', finalUserId);
-                  if (error) {
-                    console.log('DETALHE DO ERRO 400:', JSON.stringify(error, null, 2));
-                  } else {
-                    console.log('Reset salvo no Supabase');
-                  }
-                } catch (e) {
-                  console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2));
-                }
-              })();
+              syncProfileData({ hp: 100, level: 1, xp: 0 });
               return newStats;
           }
           
-          const newStats = { ...prev, hp: newHp };
-          
-          // Sync to Supabase in background
-          supabase.auth.getUser().then(async ({ data: { user } }) => {
-            const finalUserId = user?.id || '50bbc680-ac42-4409-b635-91350966be33';
-            try {
-              const { error } = await supabase
-                .from('profiles')
-                .update({ hp: newStats.hp })
-                .eq('id', finalUserId);
-              
-              if (error) {
-                console.log('DETALHE DO ERRO 400:', JSON.stringify(error, null, 2));
-              }
-              } catch (e) {
-              console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2));
-            }
-          }).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-          
-          return newStats;
+          syncProfileData({ hp: newHp });
+          return { ...prev, hp: newHp };
       });
   };
 
@@ -538,25 +483,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
               newStats = { ...prev, currentStreak: 0 };
           }
           
-          // Sync to Supabase in background
-          supabase.auth.getUser().then(async ({ data: { user } }) => {
-            const finalUserId = user?.id || '50bbc680-ac42-4409-b635-91350966be33';
-            try {
-              const { error } = await supabase
-                .from('profiles')
-                .update({
-                  current_streak: newStats.currentStreak,
-                  is_frozen: newStats.isFrozen
-                })
-                .eq('id', finalUserId);
-              
-              if (error) {
-                console.log('DETALHE DO ERRO 400:', JSON.stringify(error, null, 2));
-              }
-              } catch (e) {
-              console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2));
-            }
-          }).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
+          syncProfileData({ 
+            current_streak: newStats.currentStreak, 
+            is_frozen: newStats.isFrozen 
+          });
           
           return newStats;
       });
@@ -564,26 +494,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const activateShield = () => {
       setPlayerStats(prev => {
-          const newStats = { ...prev, isFrozen: true };
-          
-          // Sync to Supabase in background
-          supabase.auth.getUser().then(async ({ data: { user } }) => {
-            const finalUserId = user?.id || '50bbc680-ac42-4409-b635-91350966be33';
-            try {
-              const { error } = await supabase
-                .from('profiles')
-                .update({ is_frozen: true })
-                .eq('id', finalUserId);
-              
-              if (error) {
-                console.log('DETALHE DO ERRO 400:', JSON.stringify(error, null, 2));
-              }
-              } catch (e) {
-              console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2));
-            }
-          }).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-          
-          return newStats;
+          syncProfileData({ is_frozen: true });
+          return { ...prev, isFrozen: true };
       });
   };
 
