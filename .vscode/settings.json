@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^powershell -Command \"Get-Content 'c:\\\\Users\\\\EU\\\\OneDrive\\\\Desktop\\\\Questify - Improve your skills - productivity\\\\src\\\\app\\\\components\\\\EditProfileModal\\.tsx' \\| Select-Object -Last 10 \\| % \\{\\$_\\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
