@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { toast } from 'sonner';
-import { Loader2, ArrowRight, UserPlus, LogIn } from 'lucide-react';
+import { Loader2, Sword } from 'lucide-react';
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -14,91 +12,101 @@ export function LoginScreen() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
+        const { error } = await supabase.auth.signUp({ 
+          email, 
           password,
+          options: {
+            data: {
+              full_name: 'Caçador' // Nome padrão
+            }
+          }
         });
         if (error) throw error;
-        toast.success('Conta criada! Verifique seu e-mail para confirmar.');
+        toast.success('Registro concluído! Bem-vindo ao Sistema.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success('Login realizado com sucesso!');
+        toast.success('Despertar concluído. Bem-vindo de volta.');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Erro na autenticação');
+      toast.error(error.message === 'Invalid login credentials' 
+        ? 'Credenciais inválidas. Tente novamente.' 
+        : error.message || 'Erro na autenticação');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#1a1a1a] border border-border/50 rounded-xl p-8 shadow-2xl animate-in fade-in zoom-in duration-500">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white text-lg font-bold mx-auto mb-4">
-            RPG
+    <div className="min-h-screen flex items-center justify-center relative bg-[#0f0f0f] overflow-hidden">
+      {/* Imagem de Fundo (Vibe Abismo/Masmorra) */}
+      <div 
+        className="absolute inset-0 z-0 opacity-40 mix-blend-overlay"
+        style={{
+          backgroundImage: 'url(https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2068&auto=format&fit=crop)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      {/* Degradê sobre a imagem para garantir leitura do texto */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/80 to-transparent" />
+
+      {/* Container do Formulário */}
+      <div className="relative z-10 w-full max-w-md p-8 md:p-10 bg-black/50 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.1)]">
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center mb-4 border border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+            <Sword className="text-blue-400 w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {isSignUp ? 'Criar Conta' : 'Bem-vindo de volta'}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            {isSignUp 
-              ? 'Comece sua jornada de produtividade gamificada.' 
-              : 'Faça login para continuar sua evolução.'}
+          <h1 className="text-3xl font-bold text-white tracking-wider">QUESTIFY</h1>
+          <p className="text-gray-400 mt-2 text-sm uppercase tracking-widest">
+            {isSignUp ? 'Inicie sua Jornada' : 'Acesse o Sistema'}
           </p>
         </div>
 
-        <form onSubmit={handleAuth} className="space-y-4">
+        <form onSubmit={handleAuth} className="space-y-6">
           <div className="space-y-2">
-            <Input
+            <label className="text-sm font-medium text-gray-300">E-mail</label>
+            <input
               type="email"
-              placeholder="E-mail"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-[#0f0f0f] border-border/50"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="bg-[#0f0f0f] border-border/50"
-              required
-              minLength={6}
+              placeholder="seu@email.com"
+              className="w-full px-4 py-3 rounded-lg bg-[#0f0f0f]/80 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
             />
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2"
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-300">Senha</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-4 py-3 rounded-lg bg-[#0f0f0f]/80 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+            />
+          </div>
+
+          <button
+            type="submit"
             disabled={loading}
+            className="w-full py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]"
           >
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              isSignUp ? <UserPlus className="mr-2 h-4 w-4" /> : <LogIn className="mr-2 h-4 w-4" />
-            )}
-            {isSignUp ? 'Cadastrar' : 'Entrar'}
-          </Button>
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isSignUp ? 'Criar Perfil' : 'Despertar')}
+          </button>
         </form>
 
         <div className="mt-6 text-center">
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1 mx-auto"
+            className="text-sm text-gray-400 hover:text-blue-400 transition-colors"
           >
-            {isSignUp ? 'Já tem uma conta? Entrar' : 'Não tem conta? Criar agora'}
-            <ArrowRight size={14} />
+            {isSignUp 
+              ? 'Já possui acesso? Retorne ao Sistema.' 
+              : 'Novo Caçador? Registre-se aqui.'}
           </button>
         </div>
       </div>

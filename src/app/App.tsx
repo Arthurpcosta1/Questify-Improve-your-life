@@ -12,7 +12,6 @@ import { Settings } from './components/Settings';
 import { Ranking } from './components/Ranking';
 import { Inventory } from './components/Inventory';
 import { LoginScreen } from './components/LoginScreen';
-// import { WelcomeModal } from './components/WelcomeModal'; // removido
 import SystemTutorial from './components/SystemTutorial';
 import { HabitControl, HabitData } from './components/HabitControl';
 import { useState, useEffect } from 'react';
@@ -24,6 +23,7 @@ import { Button } from './components/ui/button';
 import { Bug, Loader2, Menu } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   loadAllGameData,
   createHabit,
@@ -33,12 +33,11 @@ import {
   updateQuest,
   updateQuestCompletion,
   deleteQuest,
-  addToInventory,
   resetDailyQuestsIfNeeded
 } from '../utils/supabaseTasks';
 
 type ViewState = 'dashboard' | 'store' | 'history' | 'dungeon' | 'settings' | 'ranking' | 'inventory';
-// Reward Configuration
+
 const REWARD_MAP: Record<Rank, { xp: number, gold: number }> = {
     'E': { xp: 10, gold: 5 },
     'D': { xp: 20, gold: 10 },
@@ -55,41 +54,16 @@ interface DashboardContentProps {
 function DashboardContent({ userId }: DashboardContentProps) {
   const { gainRewards, playerStats, takeDamage, updateDailyStreak } = useGame();
   
-  // -- View State --
-  const [currentView, setCurrentView] = useState<ViewState>('dashboard');
+  // -- React Router Hooks --
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Deriva a vista atual diretamente da URL
+  const currentView = (location.pathname.substring(1) || 'dashboard') as ViewState;
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // sync view with URL path
-  useEffect(() => {
-    const syncView = () => {
-      const path = window.location.pathname;
-      if (path === '/settings') {
-        setCurrentView('settings');
-      } else if (path === '/dungeon') {
-        setCurrentView('dungeon');
-      } else if (path === '/history') {
-        setCurrentView('history');
-      } else if (path === '/store') {
-        setCurrentView('store');
-      } else if (path === '/inventory') {
-        setCurrentView('inventory');
-      } else if (path === '/ranking') {
-        setCurrentView('ranking');
-      } else {
-        setCurrentView('dashboard');
-      }
-    };
-    syncView();
-    window.addEventListener('popstate', syncView);
-    return () => window.removeEventListener('popstate', syncView);
-  }, []);
-
-  // -- Data State --
-  // 1. Habits (Good/Bad Behavior)
   const [habits, setHabits] = useState<HabitData[]>([]);
-  // 2. Dailies (Recurring Missions) - reusing Habit type for structure but treated as Daily
   const [dailies, setDailies] = useState<Habit[]>([]);
-  // 3. One-time Missions (To-Do)
   const [missions, setMissions] = useState<MissionCardProps[]>([]);
 
   const [personalRewards, setPersonalRewards] = useState<RewardItem[]>([
@@ -104,16 +78,13 @@ function DashboardContent({ userId }: DashboardContentProps) {
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // fixed user ID for development when auth isn't available
   const FIXED_USER_ID = '50bbc680-ac42-4409-b635-91350966be33';
 
-  // Load all game data from Supabase on component mount
   useEffect(() => {
     const loadGameData = async () => {
       try {
         setIsLoadingData(true);
         const effectiveUserId = userId || FIXED_USER_ID;
-        // Resetar diárias se necessário
         await resetDailyQuestsIfNeeded(effectiveUserId);
         const gameData = await loadAllGameData(effectiveUserId);
         setHabits(gameData.habits);
@@ -129,93 +100,29 @@ function DashboardContent({ userId }: DashboardContentProps) {
     loadGameData();
   }, [userId]);
 
-  // -- Derived State for Today's Dailies --
   const today = new Date().getDay();
   const todaysDailies = dailies.filter(daily => 
     !daily.repeatDays || daily.repeatDays.includes(today)
   );
 
-  // -- Onboarding Check --
   useEffect(() => {
     const checkFirstLogin = async () => {
         if (habits.length > 0 || dailies.length > 0 || missions.length > 0) return;
-
         try {
             const { count, error } = await supabase
                 .from('history_logs')
                 .select('*', { count: 'exact', head: true })
                 .eq('user_id', userId);
 
-            if (!error && count === 0) {
-                setIsWelcomeModalOpen(true);
-            }
+            if (!error && count === 0) setIsWelcomeModalOpen(true);
         } catch (e) {
           console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2));
         }
     };
-    
     const timeout = setTimeout(checkFirstLogin, 1000);
     return () => clearTimeout(timeout);
   }, [userId]); 
 
-  const handleAcceptOnboarding = () => {
-      // Create Starter Data
-      
-      // 1. Habit
-      const startHabit: HabitData = {
-          id: 'h1',
-          title: 'Beber Água',
-          attribute: 'VIT',
-          rank: 'E',
-          direction: 'positive'
-      };
-
-      // 2. Daily
-      const startDaily: Habit = { 
-          id: 'd1', 
-          title: 'Ler 10 páginas', 
-          completed: false, 
-          attribute: 'INT', 
-          xp: 20,
-          gold: 10,
-          repeatDays: [0, 1, 2, 3, 4, 5, 6]
-      };
-
-      // 3. Mission
-      const startMission: MissionCardProps = {
-        id: 'm1',
-        title: 'Planejar Semana',
-        description: 'Organizar tarefas no Notion.',
-        attribute: 'WIS',
-        rank: 'D',
-        // @ts-ignore
-        xp: 20,
-        gold: 10
-      };
-
-      setHabits([startHabit]);
-      setDailies([startDaily]);
-      setMissions([startMission]);
-      setIsWelcomeModalOpen(false);
-      
-      toast.success("O Despertar concluído. Tarefas iniciais atribuídas.");
-      
-      // Sync to Supabase
-      Promise.all([
-        createHabit(userId, startHabit),
-        createQuest(userId, 'daily', startDaily),
-        createQuest(userId, 'mission', startMission),
-        supabase.from('history_logs').insert({
-          user_id: userId,
-          action_type: 'Sistema Iniciado',
-          task_name: 'O Despertar',
-          impact_value: 'Novo Jogador'
-        })
-      ]).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-  };
-
-
-  // -- Habit Control Logic (Click +/-) --
   const handleScoreHabit = (id: string, direction: 'positive' | 'negative') => {
       const habit = habits.find(h => h.id === id);
       if (!habit) return;
@@ -225,8 +132,7 @@ function DashboardContent({ userId }: DashboardContentProps) {
           gainRewards(rewards.xp, rewards.gold, habit.attribute);
           toast.success(`Hábito realizado! +${rewards.xp} XP`);
       } else {
-          // Bad Habit Damage
-          const damage = 10; // Fixed or scalable? Keeping simple for now.
+          const damage = 10;
           takeDamage(damage);
           toast.error(`Hábito negativo! -${damage} HP`);
           if (playerStats.hp - damage <= 0) setIsGameOverOpen(true);
@@ -235,35 +141,21 @@ function DashboardContent({ userId }: DashboardContentProps) {
 
   const handleDeleteHabitControl = (id: string) => {
       setHabits(habits.filter(h => h.id !== id));
-      // Sync deletion to Supabase
       deleteHabit(id).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
   };
-
-
-  // -- Dailies (Recurring) Logic --
 
   const handleToggleDaily = (id: string) => {
     setDailies(dailies.map(daily => {
       if (daily.id === id) {
         const isCompleting = !daily.completed;
-        
-        // Calculate reward based on rank if available, else legacy fallback
-        // Since `Habit` type doesn't explicitly store Rank in `DailyHabits.tsx` currently, 
-        // we might need to assume a default or migrate type. 
-        // For now, let's assume 'C' if missing or use the existing xp/gold props.
         const rewardXP = daily.xp || 40;
         const rewardGold = daily.gold || 20;
         
-        if (isCompleting) {
-          gainRewards(rewardXP, rewardGold, daily.attribute);
-        } else {
-          gainRewards(-rewardXP, -rewardGold, daily.attribute);
-        }
+        if (isCompleting) gainRewards(rewardXP, rewardGold, daily.attribute);
+        else gainRewards(-rewardXP, -rewardGold, daily.attribute);
         
         const updatedDaily = { ...daily, completed: isCompleting };
-        // Sync to Supabase
         updateQuestCompletion(id, isCompleting).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-        
         return updatedDaily;
       }
       return daily;
@@ -272,15 +164,11 @@ function DashboardContent({ userId }: DashboardContentProps) {
 
   const handleDeleteDaily = (id: string) => {
     setDailies(dailies.filter(d => d.id !== id));
-    // Sync deletion to Supabase
     deleteQuest(id).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
   };
 
-  // -- Mission (One-Time) Logic --
-
   const handleDeleteMission = (id: string) => {
     setMissions(missions.filter(m => m.id !== id));
-    // Sync deletion to Supabase
     deleteQuest(id).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
   };
 
@@ -293,17 +181,8 @@ function DashboardContent({ userId }: DashboardContentProps) {
     }
   }
 
-  // -- Rewards Store Logic --
-  
-  const handleAddReward = (reward: RewardItem) => {
-      setPersonalRewards([...personalRewards, reward]);
-  };
-
-  const handleDeleteReward = (id: string) => {
-      setPersonalRewards(personalRewards.filter(r => r.id !== id));
-  };
-
-  // -- Create / Update Task Logic --
+  const handleAddReward = (reward: RewardItem) => setPersonalRewards([...personalRewards, reward]);
+  const handleDeleteReward = (id: string) => setPersonalRewards(personalRewards.filter(r => r.id !== id));
 
   const handleOpenCreateModal = () => {
     setEditingTask(null);
@@ -311,7 +190,6 @@ function DashboardContent({ userId }: DashboardContentProps) {
   };
 
   const handleOpenEdit = (item: any, type: MissionType) => {
-      // Augment item with type for the modal
       setEditingTask({ ...item, type });
       setIsModalOpen(true);
   };
@@ -320,124 +198,48 @@ function DashboardContent({ userId }: DashboardContentProps) {
     const rewards = REWARD_MAP[task.rank];
 
     if (task.type === 'habit') {
-        const newHabit: HabitData = {
-            id: Date.now().toString(),
-            title: task.title,
-            attribute: task.attribute,
-            rank: task.rank,
-            direction: task.habitDirection || 'positive'
-        };
+        const newHabit: HabitData = { id: Date.now().toString(), title: task.title, attribute: task.attribute, rank: task.rank, direction: task.habitDirection || 'positive' };
         setHabits([...habits, newHabit]);
-        
-        // Sync to Supabase
-        createHabit(userId, newHabit).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-
+        createHabit(userId, newHabit).catch(e => console.log('Erro', e));
     } else if (task.type === 'recurring') {
-        const newDaily: Habit = {
-            id: Date.now().toString(),
-            title: task.title,
-            completed: false,
-            attribute: task.attribute,
-            xp: rewards.xp,
-            gold: rewards.gold,
-            repeatDays: task.repeatDays || [0, 1, 2, 3, 4, 5, 6]
-        };
+        const newDaily: Habit = { id: Date.now().toString(), title: task.title, completed: false, attribute: task.attribute, xp: rewards.xp, gold: rewards.gold, repeatDays: task.repeatDays || [0, 1, 2, 3, 4, 5, 6] };
         setDailies([...dailies, newDaily]);
-        
-        // Sync to Supabase
-        createQuest(userId, 'daily', newDaily).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-
+        createQuest(userId, 'daily', newDaily).catch(e => console.log('Erro', e));
     } else {
-        const newMission: MissionCardProps = {
-            id: Date.now().toString(),
-            title: task.title,
-            description: task.description || '',
-            attribute: task.attribute,
-            rank: task.rank,
-            deadline: task.deadline ? format(task.deadline, "dd MMM, yyyy", { locale: ptBR }) : undefined,
-            subtasks: task.subtasks,
-            // @ts-ignore
-            xp: rewards.xp,
-            gold: rewards.gold
-        };
+        const newMission: MissionCardProps = { id: Date.now().toString(), title: task.title, description: task.description || '', attribute: task.attribute, rank: task.rank, deadline: task.deadline ? format(task.deadline, "dd MMM, yyyy", { locale: ptBR }) : undefined, subtasks: task.subtasks, xp: rewards.xp, gold: rewards.gold };
         setMissions([...missions, newMission]);
-        
-        // Sync to Supabase
-        createQuest(userId, 'mission', newMission).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
+        createQuest(userId, 'mission', newMission).catch(e => console.log('Erro', e));
     }
     setIsModalOpen(false);
   };
 
   const handleUpdateTask = (id: string, task: NewTaskData) => {
-      // Delete old version from wherever it was (naive approach: try delete from all, then add new)
-      // Better approach: Check previous type or just ID. 
-      // Given the complexity of moving types, let's just filter ID from all lists and add to the correct new list.
-      
       setHabits(prev => prev.filter(h => h.id !== id));
       setDailies(prev => prev.filter(d => d.id !== id));
       setMissions(prev => prev.filter(m => m.id !== id));
 
-      // Add as new (preserving ID though? logic below generates new ID usually, let's reuse ID)
       const rewards = REWARD_MAP[task.rank];
 
       if (task.type === 'habit') {
-          const updatedHabit: HabitData = {
-              id,
-              title: task.title,
-              attribute: task.attribute,
-              rank: task.rank,
-              direction: task.habitDirection || 'positive'
-          };
+          const updatedHabit: HabitData = { id, title: task.title, attribute: task.attribute, rank: task.rank, direction: task.habitDirection || 'positive' };
           setHabits(prev => [...prev, updatedHabit]);
-          
-          // Sync to Supabase
-          updateHabit(id, updatedHabit).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-
+          updateHabit(id, updatedHabit).catch(e => console.log('Erro', e));
       } else if (task.type === 'recurring') {
-          const updatedDaily: Habit = {
-              id,
-              title: task.title,
-              completed: false,
-              attribute: task.attribute,
-              xp: rewards.xp,
-              gold: rewards.gold,
-              repeatDays: task.repeatDays
-          };
+          const updatedDaily: Habit = { id, title: task.title, completed: false, attribute: task.attribute, xp: rewards.xp, gold: rewards.gold, repeatDays: task.repeatDays };
           setDailies(prev => [...prev, updatedDaily]);
-          
-          // Sync to Supabase
-          updateQuest(id, 'daily', updatedDaily).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
-
+          updateQuest(id, 'daily', updatedDaily).catch(e => console.log('Erro', e));
       } else {
-          const updatedMission: MissionCardProps = {
-              id,
-              title: task.title,
-              description: task.description || '',
-              attribute: task.attribute,
-              rank: task.rank,
-              deadline: task.deadline ? format(task.deadline, "dd MMM, yyyy", { locale: ptBR }) : undefined,
-              subtasks: task.subtasks,
-              // @ts-ignore
-              xp: rewards.xp,
-              gold: rewards.gold
-          };
+          const updatedMission: MissionCardProps = { id, title: task.title, description: task.description || '', attribute: task.attribute, rank: task.rank, deadline: task.deadline ? format(task.deadline, "dd MMM, yyyy", { locale: ptBR }) : undefined, subtasks: task.subtasks, xp: rewards.xp, gold: rewards.gold };
           setMissions(prev => [...prev, updatedMission]);
-          
-          // Sync to Supabase
-          updateQuest(id, 'mission', updatedMission).catch(e => console.log('DETALHE DO ERRO 400:', JSON.stringify(e, null, 2)));
+          updateQuest(id, 'mission', updatedMission).catch(e => console.log('Erro', e));
       }
-      
       setIsModalOpen(false);
   };
 
-  // -- End of Day Logic --
-
   const handleSimulateEndOfDay = () => {
-    // Only check DAILIES scheduled for TODAY
     const incompleteDailies = todaysDailies.filter(d => !d.completed);
     const damagePerDaily = 15;
     
-    // Reset all Dailies
     setDailies(dailies.map(d => ({ ...d, completed: false })));
 
     if (incompleteDailies.length === 0) {
@@ -450,7 +252,6 @@ function DashboardContent({ userId }: DashboardContentProps) {
             toast.info(`🛡️ CRISTAL DE ESTASE: O dia foi salvo!`);
         } else {
             const totalDamage = incompleteDailies.length * damagePerDaily;
-            
             if (playerStats.hp - totalDamage <= 0) {
                 setIsGameOverOpen(true);
                 takeDamage(totalDamage); 
@@ -466,112 +267,11 @@ function DashboardContent({ userId }: DashboardContentProps) {
     await supabase.auth.signOut();
   };
 
-  const renderContent = () => {
-      if (isLoadingData) {
-        return (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          </div>
-        );
-      }
-
-      switch(currentView) {
-          case 'dashboard':
-              return (
-                <>
-                <section className="tour-profile">
-                  <PlayerProfile />
-                </section>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Left Column: Habits & Dailies */}
-                    <div className="space-y-8">
-                        <section className="tour-habits">
-                          <HabitControl 
-                            habits={habits}
-                            onScore={handleScoreHabit}
-                            onEdit={(id) => handleOpenEdit(habits.find(h => h.id === id), 'habit')}
-                            onDelete={handleDeleteHabitControl}
-                          />
-                        </section>
-
-                        <section className="tour-dailies">
-                           <DailyHabits 
-                            habits={todaysDailies} 
-                            onToggleHabit={handleToggleDaily} 
-                            onEdit={(id) => handleOpenEdit(dailies.find(d => d.id === id), 'recurring')}
-                            onDelete={handleDeleteDaily}
-                           />
-                        </section>
-                    </div>
-
-                    {/* Right Column: One-Time Missions */}
-                    <div className="space-y-8">
-                        <section className="tour-dungeon">
-                          <MissionBoard 
-                            missions={missions} 
-                            onOpenCreateModal={handleOpenCreateModal}
-                            onOpenEditModal={(mission) => handleOpenEdit(mission, 'onetime')}
-                            onDeleteTask={handleDeleteMission}
-                            onCompleteTask={handleCompleteMission}
-                          />
-                        </section>
-                    </div>
-                </div>
-
-                {playerStats.isAdmin && (
-                    <section className="pt-8 border-t border-border/20 flex justify-center">
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={handleSimulateEndOfDay}
-                            className="text-xs text-muted-foreground hover:text-red-400"
-                        >
-                            <Bug size={14} className="mr-2" />
-                            [Dev] Simular Fim do Dia
-                        </Button>
-                    </section>
-                )}
-                </>
-              );
-          case 'store':
-              return (
-                <RewardStore 
-                    personalRewards={personalRewards}
-                    onAddReward={handleAddReward}
-                    onDeleteReward={handleDeleteReward}
-                    userId={userId}
-                />
-              );
-          case 'inventory':
-              return (
-                <Inventory />
-              );
-          case 'history':
-              return (
-                  <SystemHistory userId={userId} />
-              );
-          case 'dungeon':
-              return (
-                  <DungeonContent />
-              );
-          case 'settings':
-              return <Settings />;
-            case 'ranking':
-              // Força remount do Ranking ao abrir a tela, usando key única
-              return <Ranking userId={userId} key={currentView + Date.now()} />;
-          default:
-              return null;
-      }
-  };
-
   return (
     <div className="dark min-h-screen bg-[#0f0f0f] flex text-foreground font-sans">
       <Sidebar 
         currentView={currentView} 
         onNavigate={(view) => {
-            setCurrentView(view as ViewState);
-            // push to history
             let path = '/';
             switch(view) {
               case 'dashboard': path = '/'; break;
@@ -580,15 +280,16 @@ function DashboardContent({ userId }: DashboardContentProps) {
               case 'dungeon': path = '/dungeon'; break;
               case 'settings': path = '/settings'; break;
               case 'ranking': path = '/ranking'; break;
+              case 'inventory': path = '/inventory'; break;
             }
-            window.history.pushState({}, '', path);
+            navigate(path);
+            setIsSidebarOpen(false);
         }}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
 
       <main className="flex-1 overflow-y-auto h-screen relative bg-[#0f0f0f] p-4 md:p-8">
-        
         <div className="flex items-center justify-between mb-6 md:hidden">
             <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)}>
@@ -618,17 +319,54 @@ function DashboardContent({ userId }: DashboardContentProps) {
         )}
 
         <div className="space-y-8 pb-20">
-            {renderContent()}
+            {isLoadingData ? (
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                </div>
+            ) : (
+                <Routes>
+                    <Route path="/" element={
+                        <>
+                            <section className="tour-profile">
+                                <PlayerProfile />
+                            </section>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-8">
+                                    <section className="tour-habits">
+                                        <HabitControl habits={habits} onScore={handleScoreHabit} onEdit={(id) => handleOpenEdit(habits.find(h => h.id === id), 'habit')} onDelete={handleDeleteHabitControl} />
+                                    </section>
+                                    <section className="tour-dailies">
+                                        <DailyHabits habits={todaysDailies} onToggleHabit={handleToggleDaily} onEdit={(id) => handleOpenEdit(dailies.find(d => d.id === id), 'recurring')} onDelete={handleDeleteDaily} />
+                                    </section>
+                                </div>
+                                <div className="space-y-8">
+                                    <section className="tour-dungeon">
+                                        <MissionBoard missions={missions} onOpenCreateModal={handleOpenCreateModal} onOpenEditModal={(mission) => handleOpenEdit(mission, 'onetime')} onDeleteTask={handleDeleteMission} onCompleteTask={handleCompleteMission} />
+                                    </section>
+                                </div>
+                            </div>
+                            {playerStats.isAdmin && (
+                                <section className="pt-8 border-t border-border/20 flex justify-center">
+                                    <Button variant="ghost" size="sm" onClick={handleSimulateEndOfDay} className="text-xs text-muted-foreground hover:text-red-400">
+                                        <Bug size={14} className="mr-2" />
+                                        [Dev] Simular Fim do Dia
+                                    </Button>
+                                </section>
+                            )}
+                        </>
+                    } />
+                    <Route path="/store" element={<RewardStore personalRewards={personalRewards} onAddReward={handleAddReward} onDeleteReward={handleDeleteReward} userId={userId} />} />
+                    <Route path="/inventory" element={<Inventory />} />
+                    <Route path="/history" element={<SystemHistory userId={userId} />} />
+                    <Route path="/dungeon" element={<DungeonContent />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/ranking" element={<Ranking userId={userId} key={Date.now()} />} />
+                </Routes>
+            )}
         </div>
       </main>
 
-      <NewMissionModal 
-        open={isModalOpen} 
-        onOpenChange={setIsModalOpen}
-        onCreateTask={handleCreateTask}
-        onUpdateTask={handleUpdateTask}
-        initialData={editingTask}
-      />
+      <NewMissionModal open={isModalOpen} onOpenChange={setIsModalOpen} onCreateTask={handleCreateTask} onUpdateTask={handleUpdateTask} initialData={editingTask} />
       <GameOverModal open={isGameOverOpen} onOpenChange={setIsGameOverOpen} />
       <SystemTutorial />
       <Toaster />
@@ -674,8 +412,10 @@ export default function App() {
   }
 
   return (
-    <GameProvider>
-      <DashboardContent userId={session.user.id} />
-    </GameProvider>
+    <BrowserRouter>
+      <GameProvider>
+        <DashboardContent userId={session.user.id} />
+      </GameProvider>
+    </BrowserRouter>
   );
 }
