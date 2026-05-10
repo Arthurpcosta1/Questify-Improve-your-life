@@ -4,20 +4,24 @@ import { useEffect, useState } from 'react';
 const steps: Step[] = [
   {
     target: '.tour-profile',
-    content: 'Status do Caçador: Aqui você acompanha seu HP, Nível e Atributos. Se o HP zerar, você perde tudo.',
+    content: 'Status do Caçador: Aqui você acompanha seu HP, Nível e Atributos. Mantenha seu HP alto para não falhar na jornada.',
     disableBeacon: true,
   },
   {
     target: '.tour-habits',
-    content: 'Hábitos: Ações contínuas. Bons hábitos dão XP. Maus hábitos causam dano.',
+    content: 'Hábitos: Ações repetitivas. Bons hábitos te dão XP. Maus hábitos sugam sua vida.',
   },
   {
     target: '.tour-dailies',
-    content: 'Missões Diárias: Tarefas únicas do dia. Complete para ganhar Ouro e evoluir.',
+    content: 'Missões Diárias: Suas obrigações do dia a dia. Não deixe acumular!',
   },
   {
-    target: '.tour-dungeon',
-    content: 'Masmorra de Foco: Entre para focar sem distrações. Fuja, e o Sistema punirá você.',
+    target: '.tour-missions',
+    content: 'Quadro de Missões: Aqui ficam seus grandes projetos e metas. Você pode colocar aqui: "Estudar para a CPA-20", "Finalizar requisitos do Integra Recife" ou "Desenvolver o site do Projeto Baiano".',
+  },
+  {
+    target: '.tour-sidebar-dungeon',
+    content: 'Masmorra de Foco: O lugar para o Trabalho Profundo. Entre aqui quando precisar de foco total para codar em React ou estudar Logística. O sistema punirá distrações!',
   },
 ];
 
@@ -38,62 +42,55 @@ const joyrideStyles = {
 };
 
 export default function SystemTutorial() {
-  // 1. Mudamos para FALSE! O tutorial começa desligado esperando a tela carregar.
   const [run, setRun] = useState(false);
 
   useEffect(() => {
     const hasSeen = localStorage.getItem('hasSeenTutorial');
     if (!hasSeen) {
-      // 2. Espera 1 segundo para o navegador desenhar a tela, depois liga o tutorial
-      const timer = setTimeout(() => {
-        setRun(true);
-        localStorage.setItem('hasSeenTutorial', 'true');
-      }, 1000);
-      return () => clearTimeout(timer);
+      const checkExist = setInterval(() => {
+        // Agora o Sistema procura TODOS os alvos simultaneamente
+        const step1 = document.querySelector('.tour-profile');
+        const step2 = document.querySelector('.tour-habits');
+        const step3 = document.querySelector('.tour-dailies');
+        const step4 = document.querySelector('.tour-missions');
+        const step5 = document.querySelector('.tour-sidebar-dungeon');
+        
+        // Só liga o tutorial se os 5 elementos existirem na tela
+        if (step1 && step2 && step3 && step4 && step5) {
+          setRun(true);
+          localStorage.setItem('hasSeenTutorial', 'true');
+          clearInterval(checkExist);
+        }
+      }, 500);
+
+      return () => clearInterval(checkExist);
     }
   }, []);
 
-  console.log("Status do Tutorial:", run);
-
-  const handleDebugStart = () => {
-    localStorage.removeItem('hasSeenTutorial');
-    setRun(false); // Desliga para resetar
-    
-    // Liga novamente após meio segundo
-    setTimeout(() => {
-      setRun(true);
-    }, 500);
-  };
-
-  // 3. Função para garantir que o tutorial desligue quando você clicar em "Pular" ou "Finalizar"
   const handleJoyrideCallback = (data: any) => {
     const { status } = data;
-    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
-    if (finishedStatuses.includes(status)) {
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       setRun(false);
     }
   };
 
   return (
-    <>
-      
-      <Joyride
-        steps={steps}
-        run={run}
-        continuous={true}
-        showSkipButton={true}
-        showProgress={true}
-        disableScrollParentFix={true} // <-- Previne bugs de rolagem da tela
-        callback={handleJoyrideCallback} // <-- Chama a função para desligar no final
-        styles={joyrideStyles}
-        locale={{
-          back: 'Voltar',
-          close: 'Fechar',
-          last: 'Finalizar',
-          next: 'Próximo',
-          skip: 'Pular',
-        }}
-      />
-    </>
+    <Joyride
+      steps={steps}
+      run={run}
+      continuous={true}
+      showSkipButton={true}
+      showProgress={true}
+      disableScrollParentFix={true}
+      callback={handleJoyrideCallback}
+      styles={joyrideStyles}
+      locale={{
+        back: 'Voltar',
+        close: 'Fechar',
+        last: 'Finalizar',
+        next: 'Próximo',
+        skip: 'Pular',
+      }}
+    />
   );
 }

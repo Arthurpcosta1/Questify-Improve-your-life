@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 import { toast } from 'sonner';
-import { Loader2, Sword } from 'lucide-react';
+import { Loader2, Sword, UserCircle2 } from 'lucide-react';
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -19,7 +19,7 @@ export function LoginScreen() {
           password,
           options: {
             data: {
-              full_name: 'Caçador' // Nome padrão
+              full_name: 'Caçador'
             }
           }
         });
@@ -39,21 +39,32 @@ export function LoginScreen() {
     }
   };
 
+  // --- NOVA FUNÇÃO DE CONVIDADO ---
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+      toast.success('Acesso de Convidado liberado. Bem-vindo ao Sistema!');
+    } catch (error: any) {
+      toast.error('Erro ao entrar como convidado: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center relative bg-[#0f0f0f] overflow-hidden">
-      {/* Imagem de Fundo (Vibe Abismo/Masmorra) */}
       <div 
         className="absolute inset-0 z-0 opacity-40 mix-blend-overlay"
         style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2068&auto=format&fit=crop)',
+          backgroundImage: 'url(/solo-leveling.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       />
-      {/* Degradê sobre a imagem para garantir leitura do texto */}
       <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/80 to-transparent" />
 
-      {/* Container do Formulário */}
       <div className="relative z-10 w-full max-w-md p-8 md:p-10 bg-black/50 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.1)]">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-blue-600/20 rounded-full flex items-center justify-center mb-4 border border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
@@ -98,6 +109,19 @@ export function LoginScreen() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isSignUp ? 'Criar Perfil' : 'Despertar')}
           </button>
         </form>
+
+        {/* --- BOTÃO DE CONVIDADO --- */}
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <button
+            type="button"
+            onClick={handleGuestLogin}
+            disabled={loading}
+            className="w-full py-3 px-4 rounded-lg bg-transparent hover:bg-white/5 border border-white/20 text-gray-300 hover:text-white font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <UserCircle2 className="w-5 h-5" />
+            Entrar como Convidado
+          </button>
+        </div>
 
         <div className="mt-6 text-center">
           <button

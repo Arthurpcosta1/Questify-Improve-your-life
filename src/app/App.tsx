@@ -340,9 +340,9 @@ function DashboardContent({ userId }: DashboardContentProps) {
                                     </section>
                                 </div>
                                 <div className="space-y-8">
-                                    <section className="tour-dungeon">
-                                        <MissionBoard missions={missions} onOpenCreateModal={handleOpenCreateModal} onOpenEditModal={(mission) => handleOpenEdit(mission, 'onetime')} onDeleteTask={handleDeleteMission} onCompleteTask={handleCompleteMission} />
-                                    </section>
+                                    <section className="tour-missions"> {/* Nome corrigido aqui */}
+    <MissionBoard missions={missions} onOpenCreateModal={handleOpenCreateModal} onOpenEditModal={(mission) => handleOpenEdit(mission, 'onetime')} onDeleteTask={handleDeleteMission} onCompleteTask={handleCompleteMission} />
+</section>
                                 </div>
                             </div>
                             {playerStats.isAdmin && (

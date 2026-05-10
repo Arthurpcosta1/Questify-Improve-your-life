@@ -78,7 +78,8 @@ export function Sidebar({ currentView = 'dashboard', onNavigate, isOpen = false,
               <a
               href="#"
               onClick={(e) => handleNav('dungeon', e)}
-              className={linkClass('dungeon')}
+              // 👇 A MUDANÇA ESTÁ AQUI: Juntamos a string do linkClass com a nossa nova classe 👇
+              className={`${linkClass('dungeon')} tour-sidebar-dungeon`}
               >
               <Swords size={18} />
               <span className="text-sm font-medium">Masmorras</span>
@@ -141,6 +142,7 @@ export function Sidebar({ currentView = 'dashboard', onNavigate, isOpen = false,
             <span className="text-sm">Configurações</span>
           </a>
         </div>
+        
       </aside>
     </>
   );
