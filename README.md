@@ -8,7 +8,7 @@ Questify é um app web gamificado projetado para acabar com a procrastinação. 
 
 Os usuários assumem o papel de "Caçadores", onde projetos reais (como estudos, trabalho e saúde) se tornam missões que rendem Ouro e Experiência.
 
-## ✨ Funcionalidades Principais (Features)
+ Funcionalidades Principais (Features)
 
 * **Autenticação Descomplicada:** Sistema de login completo (E-mail/Senha) e opção de **Acesso como Convidado** (Frictionless Onboarding) via Supabase.
 * **Gestão de Status:** Acompanhamento em tempo real de HP (Vida), Nível, Ouro, e Atributos Clássicos (STR, INT, DEX, WIS, VIT).
@@ -21,7 +21,7 @@ Os usuários assumem o papel de "Caçadores", onde projetos reais (como estudos,
 * **Sistema de Conquistas e Títulos:** Desbloqueie títulos equipáveis (ex: "Monarca das Sombras", "O Imortal") ao manter combos de dias (Streak) ou atingir marcos de tarefas.
 * **Tutorial Interativo:** *Onboarding* gamificado guiando o usuário pela interface no seu primeiro acesso.
 
-## 🛠️ Tecnologias Utilizadas
+ Tecnologias Utilizadas
 
 Este projeto foi construído utilizando as seguintes tecnologias e arquiteturas:
 
@@ -32,16 +32,16 @@ Este projeto foi construído utilizando as seguintes tecnologias e arquiteturas:
 * **[React Router Dom](https://reactrouter.com/)**: Gerenciamento de rotas e navegação Single Page Application (SPA).
 * **Bibliotecas de UI/UX:** `lucide-react` (Ícones), `sonner` (Toasts de feedback), `react-joyride` (Tours interativos).
 
-## 🚀 Como Executar Localmente
+Como Executar Localmente
 
 Siga as instruções abaixo para rodar o projeto na sua máquina local:
 
-### Pré-requisitos
+ Pré-requisitos
 * Node.js (versão 18+ recomendada)
 * Git
 * Uma conta no Supabase (para as variáveis de ambiente)
 
-### Passos
+Passos
 
 1. Clone o repositório:
 ```bash
